@@ -100,8 +100,11 @@ while listen:
                 sleep(1)
         if all(v for v in PI.qONT().values()):
             print('axes stopped moving and are on target')
-            print('absolute motor positions are now:')
-            print(PI.qPOS())
+            print('absolute motor positions now are:')
+            print(f" Motor 1: {round(PI.qPOS()['1'], 3)}\n",
+                  f"Motor 2: {round(PI.qPOS()['2'], 3)}\n",
+                  f"Motor 3: {round(PI.qPOS()['3'], 3)}"
+                 )
             print('===============================================')
         else:
             print('some axes are not on target:')
