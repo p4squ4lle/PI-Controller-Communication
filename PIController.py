@@ -71,6 +71,8 @@ if LaserDesk.is_open:
 else:
     print('Serial port could not be opened.')
 
+print('===============================================')
+
 listen = True
 while listen:
     bytes_waiting = LaserDesk.in_waiting
@@ -78,8 +80,7 @@ while listen:
         continue
     input_bytes = LaserDesk.read_until(b'\x03')
     input_string = input_bytes.decode()[1:-1]
-    print(f'input: {input_string}')
-    # if input string
+    # print(f'input: {input_string}')
     
     if input_string=='End':
         listen = False
@@ -99,8 +100,13 @@ while listen:
                 sleep(1)
         if all(v for v in PI.qONT().values()):
             print('axes stopped moving and are on target')
+            print('absolute motor positions are now:')
+            print(PI.qPOS())
+            print('===============================================')
         else:
-            print('some axes are not on target:')    # specify axes here
+            print('some axes are not on target:')
+            print(PI.qONT())
+            print('===============================================')
         LaserDesk.write(b'\x02 1 \x03')
     except Exception as e:
         print('An exception occured while sending the command to the PI controller:')
