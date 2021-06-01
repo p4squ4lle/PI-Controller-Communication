@@ -16,6 +16,9 @@ logging.basicConfig(level=loggin.INFO,
                               logging.StreamHandler()
                              ]
                    )
+position_file = open(f'motor_positions_{dt_string}.csv', 'a')
+position_file.write("#pos_m1, pos_m2, pos_m3 [mm]")
+
 # Laser Desk COM port
 LASER_DESK_COM = 'COM6'
 
@@ -58,6 +61,7 @@ else:
 
 if all(v for v in reference_dict.values()):
     logging.info('All axes have been succesfully referenced.')
+    position_file.write(f"{PI.qPOS()['1']}, {PI.qPOS()['2']}, {PI.qPOS()['3']}")
 else:
     logging.warning('The following axes have not been referenced properly',
           f'{[k for k in reference_dict.keys() if reference_dict[k]==False]}')
@@ -114,6 +118,7 @@ while listen:
                   f"Motor 2: {round(PI.qPOS()['2'], 3)}\n",
                   f"Motor 3: {round(PI.qPOS()['3'], 3)}"
                  )
+            position_file.write(f"{PI.qPOS()['1']}, {PI.qPOS()['2']}, {PI.qPOS()['3']}")
             print('===============================================')
         else:
             logging.warning(f'some axes are not on target: {PI.qONT()}')
