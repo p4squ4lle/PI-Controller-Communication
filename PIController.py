@@ -3,10 +3,20 @@
 import serial
 import subprocess
 import logging
+from datetime import datetime
 from pipython import GCSDevice, pitools
 from time import sleep
 
-# Constants
+# Set-Up logging
+dt = datetime.now()
+dt_string = dt.strftime("%H-%M_%d%m%Y")
+logging.basicConfig(level=loggin.INFO,
+                    format="%(asctime)s [%(levelname)s] %(message)s",
+                    handlers=[logging.FileHandler(f"{dt_string}.log"),
+                              logging.StreamHandler()
+                             ]
+                   )
+# Laser Desk COM port
 LASER_DESK_COM = 'COM6'
 
 # Start Laser Desk
@@ -22,35 +32,34 @@ REFMODE = 'FRF'
 
 PI = GCSDevice('C-844')
 PI.ConnectUSB(serialnum=SN)
-print('connected: {}'.format(PI.qIDN().strip()))
+logging.info('connected: {}'.format(PI.qIDN().strip()))
     
-print('===============================================')
+print('-----------------------------------------------')
     
 if PI.HasqVER():
-    print('version info: {}'.format(PI.qVER().strip()))
+    logging.info('version info: {}'.format(PI.qVER().strip()))
     
-print('===============================================')
+print('-----------------------------------------------')
             
-print(f'initialize connected stages: {STAGES}')
+logging.info(f'initialize connected stages: {STAGES}')
 pitools.startup(PI, stages=STAGES, refmodes=REFMODE)
-print('Connected Stages:',
-      f'{PI.qCST()}')
+logging.info(f'Connected Stages: {PI.qCST()}')
 
-print('===============================================')
+print('-----------------------------------------------')
 
 servo_dict = PI.qSVO()
 reference_dict = PI.qFRF()
 
 if all(v for v in servo_dict.values()):
-    print('Servo-control is set ON for all axes')
+    logging.info('Servo-control is set ON for all axes')
 else:
-    print('WARNING: servo-control is not set ON for axes',
+    logging.warning('Servo-control is not set ON for axes',
           f'{[k for k in servo_dict.keys() if servo_dict[k]==False]}')
 
 if all(v for v in reference_dict.values()):
-    print('All axes have been succesfully referenced.')
+    logging.info('All axes have been succesfully referenced.')
 else:
-    print('WARNING: the following axes have not been referenced properly',
+    logging.warning('The following axes have not been referenced properly',
           f'{[k for k in reference_dict.keys() if reference_dict[k]==False]}')
     
 rangemin = list(PI.qTMN().values())
@@ -62,14 +71,14 @@ ranges = zip(rangemin, rangemax)
 
 pi_error = PI.qERR()
 if pi_error > 0:
-    print(f'WARNING: an error occurred (error code: {pi_error})',
+    logging.warning(f'WARNING: an error occurred (error code: {pi_error})',
           PI.TranslateError(pi_error))
 
 LaserDesk = serial.Serial(LASER_DESK_COM)
 if LaserDesk.is_open:
-    print('Serial connection was successfully established.')
+    logging.info('Serial connection was successfully established.')
 else:
-    print('Serial port could not be opened.')
+    logging.warning('Serial port could not be opened.')
 
 print('===============================================')
 
@@ -80,9 +89,9 @@ while listen:
         continue
     input_bytes = LaserDesk.read_until(b'\x03')
     input_string = input_bytes.decode()[1:-1]
-    # print(f'input: {input_string}')
     
     if input_string=='End':
+        logging.info("Recieved 'End' command. Stop listening")
         listen = False
         continue
     
@@ -92,28 +101,28 @@ while listen:
     
     try:
         PI.send(input_string)
-        print(f'string sent to pi controller: {input_string}')
+        logging.debug(f'string sent to pi controller: {input_string}')
         if any(v for v in PI.IsMoving().values()):
             print('axes are moving', end='')
             while any(v for v in PI.IsMoving().values()):
                 print('.', end='')
                 sleep(1)
         if all(v for v in PI.qONT().values()):
-            print('axes stopped moving and are on target')
-            print('absolute motor positions now are:')
-            print(f" Motor 1: {round(PI.qPOS()['1'], 3)}\n",
+            logging.info('axes stopped moving and are on target')
+            loggging.info('absolute motor positions now are:')
+            logging.info(f" Motor 1: {round(PI.qPOS()['1'], 3)}\n",
                   f"Motor 2: {round(PI.qPOS()['2'], 3)}\n",
                   f"Motor 3: {round(PI.qPOS()['3'], 3)}"
                  )
             print('===============================================')
         else:
-            print('some axes are not on target:')
-            print(PI.qONT())
+            logging.warning(f'some axes are not on target: {PI.qONT()}')
             print('===============================================')
         LaserDesk.write(b'\x02 1 \x03')
     except Exception as e:
-        print('An exception occured while sending the command to the PI controller:')
-        print(e)
+        logging.error('An exception occured while sending the command to the PI controller:')
+        logging.error(e)
         LaserDesk.write(b'\x02 0 \x03')
         
 LaserDesk.close()
+logging.info("Serial connection was closed. End of script.")
