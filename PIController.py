@@ -10,14 +10,14 @@ from time import sleep
 # Set-Up logging
 dt = datetime.now()
 dt_string = dt.strftime("%H-%M_%d%m%Y")
-logging.basicConfig(level=loggin.INFO,
+logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s",
-                    handlers=[logging.FileHandler(f"{dt_string}.log"),
+                    handlers=[logging.FileHandler(f"log/{dt_string}.log"),
                               logging.StreamHandler()
                              ]
                    )
-position_file = open(f'motor_positions_{dt_string}.csv', 'a')
-position_file.write("#pos_m1, pos_m2, pos_m3 [mm]")
+position_file = open(f'log/motor_positions_{dt_string}.csv', 'a')
+position_file.write("#pos_m1, pos_m2, pos_m3 [mm]\n")
 
 # Laser Desk COM port
 LASER_DESK_COM = 'COM6'
@@ -61,7 +61,7 @@ else:
 
 if all(v for v in reference_dict.values()):
     logging.info('All axes have been succesfully referenced.')
-    position_file.write(f"{PI.qPOS()['1']}, {PI.qPOS()['2']}, {PI.qPOS()['3']}")
+    position_file.write(f"{PI.qPOS()['1']}, {PI.qPOS()['2']}, {PI.qPOS()['3']}\n")
 else:
     logging.warning('The following axes have not been referenced properly',
           f'{[k for k in reference_dict.keys() if reference_dict[k]==False]}')
@@ -100,12 +100,12 @@ while listen:
         continue
     
     controller_ready_flag = PI.IsControllerReady()
-    while any(v for v in PI.IsMoving().values()):
-        sleep(0.5)
+    #while any(v for v in PI.IsMoving().values()):
+    #   sleep(0.5)
     
     try:
         PI.send(input_string)
-        logging.debug(f'string sent to pi controller: {input_string}')
+        logging.info(f'string sent to pi controller: {input_string}')
         if any(v for v in PI.IsMoving().values()):
             print('axes are moving', end='')
             while any(v for v in PI.IsMoving().values()):
@@ -113,12 +113,9 @@ while listen:
                 sleep(1)
         if all(v for v in PI.qONT().values()):
             logging.info('axes stopped moving and are on target')
-            loggging.info('absolute motor positions now are:')
-            logging.info(f" Motor 1: {round(PI.qPOS()['1'], 3)}\n",
-                  f"Motor 2: {round(PI.qPOS()['2'], 3)}\n",
-                  f"Motor 3: {round(PI.qPOS()['3'], 3)}"
-                 )
-            position_file.write(f"{PI.qPOS()['1']}, {PI.qPOS()['2']}, {PI.qPOS()['3']}")
+            logging.info('absolute motor positions now are:')
+            logging.info(f'{PI.qPOS()}')
+            position_file.write(f"{PI.qPOS()['1']}, {PI.qPOS()['2']}, {PI.qPOS()['3']}\n")
             print('===============================================')
         else:
             logging.warning(f'some axes are not on target: {PI.qONT()}')
@@ -128,6 +125,7 @@ while listen:
         logging.error('An exception occured while sending the command to the PI controller:')
         logging.error(e)
         LaserDesk.write(b'\x02 0 \x03')
-        
+
+position_file.close()
 LaserDesk.close()
 logging.info("Serial connection was closed. End of script.")
